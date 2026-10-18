@@ -1,0 +1,226 @@
+{
+  "modelVersion": "0.1",
+  "status": "proposal",
+  "purpose": "Document structures and examples for review. This file is documentation, not a database import file or an executable validation schema.",
+  "database": "erp_db_test",
+  "scope": {
+    "included": [
+      "Income and expense transactions",
+      "Income and expense categories",
+      "Cash and bank accounts",
+      "Ownership fields for future multi-user support"
+    ],
+    "excluded": [
+      "Registration and login implementation",
+      "Transfers between accounts",
+      "Currency conversion",
+      "Tax calculations",
+      "Invoices and receipt processing",
+      "Shared workspaces and business roles"
+    ]
+  },
+  "proposedConventions": {
+    "documentIds": "Use a document-type prefix followed by a unique identifier. Example IDs below are illustrative.",
+    "ownership": "Every account, category and transaction has an ownerId. user:demo is a placeholder, not an implemented user account.",
+    "documentType": "The type field identifies account, category or transaction.",
+    "transactionDirection": "The direction field identifies income or expense.",
+    "money": "Store amounts as positive integers in the currency's minor unit. For EUR, 2500 means EUR 25.00.",
+    "currency": "For the MVP, use EUR only. Store currency on accounts and transactions to make the assumption explicit.",
+    "transactionDate": "Use YYYY-MM-DD for the business date of a transaction.",
+    "timestamps": "Use UTC timestamps such as 2026-10-15T16:00:00Z for createdAt and updatedAt.",
+    "optionalFields": "Optional fields may be omitted. Examples include them where useful.",
+    "revisions": "Do not invent _rev values for new documents. CouchDB supplies revision information; updates must use the current revision.",
+    "deletion": "Propose archiving accounts and categories instead of deleting those referenced by transactions.",
+    "balances": "Do not store a mutable current balance. Calculate it from openingBalanceMinor plus income minus expenses for each account."
+  },
+  "documentTypes": {
+    "account": {
+      "description": "A cash or bank account belonging to one owner.",
+      "requiredFields": {
+        "_id": "string: unique account document identifier",
+        "type": "string: account",
+        "ownerId": "string: future owner identifier",
+        "name": "string: non-empty display name",
+        "kind": "string: cash or bank",
+        "currency": "string: EUR for the proposed MVP",
+        "openingBalanceMinor": "integer: initial balance in cents; may be zero or negative",
+        "isArchived": "boolean: whether the account is unavailable for new transactions",
+        "createdAt": "string: UTC creation timestamp",
+        "updatedAt": "string: UTC last-update timestamp"
+      },
+      "optionalFields": {
+        "description": "string: additional account information"
+      },
+      "examples": [
+        {
+          "_id": "account:cash-demo",
+          "type": "account",
+          "ownerId": "user:demo",
+          "name": "Cash",
+          "kind": "cash",
+          "currency": "EUR",
+          "openingBalanceMinor": 10000,
+          "isArchived": false,
+          "createdAt": "2026-10-15T16:00:00Z",
+          "updatedAt": "2026-10-15T16:00:00Z",
+          "description": "Cash available when starting to use the application."
+        },
+        {
+          "_id": "account:bank-demo",
+          "type": "account",
+          "ownerId": "user:demo",
+          "name": "Bank account",
+          "kind": "bank",
+          "currency": "EUR",
+          "openingBalanceMinor": 0,
+          "isArchived": false,
+          "createdAt": "2026-10-15T16:00:00Z",
+          "updatedAt": "2026-10-15T16:00:00Z"
+        }
+      ]
+    },
+    "category": {
+      "description": "An income or expense category belonging to one owner.",
+      "requiredFields": {
+        "_id": "string: unique category document identifier",
+        "type": "string: category",
+        "ownerId": "string: future owner identifier",
+        "name": "string: non-empty display name",
+        "direction": "string: income or expense",
+        "isArchived": "boolean: whether the category is unavailable for new transactions",
+        "createdAt": "string: UTC creation timestamp",
+        "updatedAt": "string: UTC last-update timestamp"
+      },
+      "optionalFields": {
+        "description": "string: explanation of the category"
+      },
+      "examples": [
+        {
+          "_id": "category:groceries-demo",
+          "type": "category",
+          "ownerId": "user:demo",
+          "name": "Groceries",
+          "direction": "expense",
+          "isArchived": false,
+          "createdAt": "2026-10-15T16:00:00Z",
+          "updatedAt": "2026-10-15T16:00:00Z",
+          "description": "Food and household groceries."
+        },
+        {
+          "_id": "category:services-demo",
+          "type": "category",
+          "ownerId": "user:demo",
+          "name": "Service income",
+          "direction": "income",
+          "isArchived": false,
+          "createdAt": "2026-10-15T16:00:00Z",
+          "updatedAt": "2026-10-15T16:00:00Z"
+        }
+      ]
+    },
+    "transaction": {
+      "description": "One income or expense operation linked to an account and a category.",
+      "requiredFields": {
+        "_id": "string: unique transaction document identifier",
+        "type": "string: transaction",
+        "ownerId": "string: future owner identifier",
+        "direction": "string: income or expense",
+        "amountMinor": "integer: strictly positive amount in cents",
+        "currency": "string: must match the referenced account currency",
+        "date": "string: valid transaction date in YYYY-MM-DD format",
+        "accountId": "string: reference to an account document",
+        "categoryId": "string: reference to a category document",
+        "createdAt": "string: UTC creation timestamp",
+        "updatedAt": "string: UTC last-update timestamp"
+      },
+      "optionalFields": {
+        "description": "string: user-provided transaction description"
+      },
+      "examples": [
+        {
+          "_id": "transaction:expense-demo",
+          "type": "transaction",
+          "ownerId": "user:demo",
+          "direction": "expense",
+          "amountMinor": 2500,
+          "currency": "EUR",
+          "date": "2026-10-15",
+          "accountId": "account:cash-demo",
+          "categoryId": "category:groceries-demo",
+          "createdAt": "2026-10-15T16:10:00Z",
+          "updatedAt": "2026-10-15T16:10:00Z",
+          "description": "Weekly grocery shopping."
+        },
+        {
+          "_id": "transaction:income-demo",
+          "type": "transaction",
+          "ownerId": "user:demo",
+          "direction": "income",
+          "amountMinor": 15000,
+          "currency": "EUR",
+          "date": "2026-10-15",
+          "accountId": "account:bank-demo",
+          "categoryId": "category:services-demo",
+          "createdAt": "2026-10-15T16:15:00Z",
+          "updatedAt": "2026-10-15T16:15:00Z",
+          "description": "Payment for completed services."
+        }
+      ]
+    }
+  },
+  "relationships": [
+    {
+      "from": "transaction.accountId",
+      "to": "account._id",
+      "rule": "The account must exist and have the same ownerId as the transaction."
+    },
+    {
+      "from": "transaction.categoryId",
+      "to": "category._id",
+      "rule": "The category must exist and have the same ownerId and direction as the transaction."
+    },
+    {
+      "from": "account.ownerId, category.ownerId, transaction.ownerId",
+      "to": "Future user identity",
+      "rule": "Ownership is modelled now; authentication and access control will be implemented separately."
+    }
+  ],
+  "proposedValidationRules": [
+    "Reject unknown document types and transaction directions.",
+    "Require non-empty names for accounts and categories.",
+    "Require amountMinor to be a positive integer.",
+    "Require openingBalanceMinor to be an integer.",
+    "Require valid dates and UTC timestamps.",
+    "Require transaction currency to match account currency.",
+    "Require linked documents to belong to the same owner.",
+    "Require transaction direction to match category direction.",
+    "Do not allow new transactions to reference archived accounts or categories.",
+    "Do not change the owner of an existing document.",
+    "Do not change an account currency or category direction after transactions reference it.",
+    "Keep archived accounts and categories available when displaying historical transactions.",
+    "Set ownership from the authenticated identity once authentication is implemented; do not trust a client-supplied ownerId."
+  ],
+  "exampleExpectedBalances": [
+    {
+      "accountId": "account:cash-demo",
+      "openingBalanceMinor": 10000,
+      "incomeMinor": 0,
+      "expenseMinor": 2500,
+      "balanceMinor": 7500
+    },
+    {
+      "accountId": "account:bank-demo",
+      "openingBalanceMinor": 0,
+      "incomeMinor": 15000,
+      "expenseMinor": 0,
+      "balanceMinor": 15000
+    }
+  ],
+  "reviewPoints": [
+    "Confirm the proposed single-currency EUR scope.",
+    "Confirm that every transaction requires a category.",
+    "Confirm how opening balances should behave if backdated transactions are added.",
+    "Confirm whether per-user ownership is sufficient initially or whether organisation/workspace ownership is needed.",
+    "Confirm archiving behaviour and transaction editing/deletion policy."
+  ]
+}
